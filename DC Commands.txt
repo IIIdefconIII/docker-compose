@@ -1,0 +1,161 @@
+#############################################################
+#					Install Docker-Compose					#
+#############################################################
+
+##ReadMe stuff: https://www.smarthomebeginner.com/traefik-2-docker-tutorial/
+
+##Pre-Requirements:
+Open port 443 and 80 from external network in router to Synology IP
+Kill all Synology servers that are using the ports defined in the .env file
+Create synology tasks:
+1. User-defined -> Boot up -> Name=change-port-80, user root -> Run command=bash /volume1/docker/change-port-80.sh
+2. User-defined -> Boot up -> Name=change-port-443, user root -> Run command=bash /volume1/docker/change-port-443.sh
+2. User-defined -> Boot up -> Name=chmod 777 dev dri card0 dev dri renderD128, user root -> Run command=bash /volume1/docker/plexms/device-perm-set.sh
+4. Download package docker in synology Package Center
+5. Enable SSH in Control Panel -> Terminal & SNMP
+
+##Optional (move the docker share to your wanted volume)
+Stop Docker Package on Synology in Package Center
+Move the location of the share to the wanted volume in Control Panel -> Shared Folders
+Start Docker Package on Synology in Package Center
+
+##Optional (unhide docker shared folder from network, default=hiden)
+Stop Docker Package on Synology in Package Center
+Unhide it from the network in Control Panel -> Shared Folders
+Start Docker Package on Synology in Package Center
+
+##Instal steps
+Install a SSH application and connect to the nas:
+sudo cd /var/packages/Docker/target/usr/bin
+sudo mv docker-compose docker-compose_bak
+check which version you like: https://github.com/docker/compose/releases
+sudo curl -L https://github.com/docker/compose/releases/download/1.29.2/docker-compose-`uname -s`-`uname -m` -o docker-compose
+sudo chmod +x /var/packages/Docker/target/usr/bin/docker-compose
+sudo reboot
+
+##Create files and folders (change to correct volume)
+mkdir /volume1/docker/traefik2/acme
+touch /volume1/docker/traefik2/acme/acme.json
+chmod 600 /volume1/docker/traefik2/acme/acme.json
+touch /volume1/docker/traefik2/traefik.log
+touch /volume1/docker/traefik2/traefik_access.log
+mkdir /volume1/docker/traefik2/certs
+mkdir /volume1/docker/nzbget
+mkdir /volume1/docker/redbot
+mkdir /volume1/docker/heimdall
+mkdir /volume1/docker/radarr
+mkdir /volume1/docker/radarr/MediaCover
+mkdir /volume1/docker/sonarr
+mkdir /volume1/docker/sonarr/MediaCover
+mkdir /volume1/data/plex_transcode
+mkdir "/volume1/library/TV Shows"
+mkdir /volume1/docker/jackett
+mkdir /volume1/docker/glances
+touch /volume1/docker/glances/glances.conf
+mkdir /volume1/docker/qdirstat
+mkdir /volume1/docker/qdirstat/config
+mkdir /volume1/library/Movies
+mkdir /volume1/docker/plexms/
+mkdir /volume1/docker/plexms/Library
+mkdir "/volume1/docker/plexms/Library/Application Support"
+mkdir "/volume1/docker/plexms/Library/Application Support/Plex Media Server"
+mkdir "/volume1/docker/plexms/Library/Application Support/Plex Media Server/Logs"
+mkdir "/volume1/docker/plexms/Library/Application Support/Plex Media Server/Media"
+mkdir "/volume1/docker/plexms/Library/Application Support/Plex Media Server/Cache"
+mkdir "/volume1/docker/plexms/Library/Application Support/Plex Media Server/Metadata"
+mkdir /volume1/docker/portainer
+mkdir /volume1/docker/mariadb
+mkdir /volume1/docker/mariadb/data
+mkdir /volume1/docker/autoscan
+mkdir /volume1/docker/handbrake
+mkdir /volume1/docker/bazarr
+mkdir /volume1/docker/tautulli
+mkdir /volume1/docker/readarr
+mkdir /volume1/plex_transcode
+mkdir /volume1/docker/redbot
+mkdir /volume1/docker/notifiarr
+touch /volume1/docker/notifiarr/notifiarr.conf
+touch /volume1/docker/notifiarr/notifiarr.log
+touch /volume1/docker/notifiarr/http_request.log
+
+##Change the Environment file #secrets
+Extract the files from my_package.zip to /volume1/docker/
+Change the paths and all other variables to your needs.
+Also change the traefik/rules files to your needs + traefik.toml
+
+##Try to launch for the first time
+cd /volume1/docker
+sudo docker-compose -f docker-compose.yml up -d
+Fix all errors that you get in SSH by editing the .env file in /volume1/docker/.env
+Try to run it again untill all errors are gone
+
+Aftert the acme.json file is filled with data, uncomment the below line in docker-compose.yml
+- --certificatesResolvers.dns-cloudflare.acme.caServer=https://acme-staging-v02.api.letsencrypt.org/directory             #  <--- LetsEncrypt Staging Server - uncomment when testing
+
+
+Good H@ck!
+
+#############################################################
+#			     Force docker container update				#
+#############################################################
+docker-compose pull && docker-compose -f docker-compose.yml up -d
+
+
+#############################################################
+#					Update Docker-Compose					#
+#############################################################
+cd /volume1/docker
+sudo docker-compose down
+cd /var/packages/Docker/target/usr/bin
+sudo rm /var/packages/Docker/target/usr/bin/docker-compose
+check which version you like: https://github.com/docker/compose/releases
+sudo curl -L https://github.com/docker/compose/releases/download/1.29.2/docker-compose-`uname -s`-`uname -m` -o docker-compose
+sudo chmod +x /var/packages/Docker/target/usr/bin/docker-compose
+sudo reboot
+cd /volume1/docker
+sudo docker-compose -f docker-compose.yml up -d
+
+
+#############################################################
+#  					  General Commands  	 				#
+#############################################################
+
+cd /volume1/docker
+sudo docker-compose -f docker-compose.yml up -d
+docker rm -fv $(docker ps -aq) #clean-install
+Container version number: docker inspect -f '{{ index .Config.Labels "build_version" }}' bazarr
+Image version number: docker inspect -f '{{ index .Config.Labels "build_version" }}' linuxserver/bazarr
+
+
+#############################################################
+#  	 				        Extra  	  	        			#
+#############################################################
+docker logs -tf --tail="50" traefik
+docker ps -a
+docker-compose pull
+docker-compose up -d
+docker-compose down (removing)
+
+
+
+
+After a hard restart of our docker containers 
+docker-compose stop
+docker-compose up -d
+Shell access whilst the container is running: docker exec -it bazarr /bin/bash
+
+
+#############################################################
+#  	 		         Single Package Update  	   			#
+#############################################################
+cd /volume1/docker
+docker-compose plex
+docker-compose up -d --no-deps --build plex
+
+
+#############################################################
+#  	 		         Synology Commands  	 		        #
+#############################################################
+sudo netstat -tulpn | grep LISTEN | grep '80\|443'
+sudo netstat -plunt | egrep "1900"
+sudo lsof -i -P -n | grep <port number>  # List who's using the port
